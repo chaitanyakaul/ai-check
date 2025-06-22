@@ -8,9 +8,6 @@ router.get('/quote/:symbol', stockController.getQuote);
 // GET /api/v1/stocks/historical/:symbol - Get historical data
 router.get('/historical/:symbol', stockController.getHistoricalData);
 
-// GET /api/v1/stocks/technical/:symbol - Get technical indicators
-router.get('/technical/:symbol', stockController.getTechnicalIndicator);
-
 // GET /api/v1/stocks/search - Search for stocks
 router.get('/search', stockController.searchStocks);
 
@@ -20,7 +17,10 @@ router.get('/overview/:symbol', stockController.getCompanyOverview);
 // GET /api/v1/stocks/quotes - Get multiple stock quotes
 router.get('/quotes', stockController.getMultipleQuotes);
 
-// GET /api/v1/stocks/rate-limit - Get API rate limit status
-router.get('/rate-limit', stockController.getRateLimitStatus);
+// GET /api/v1/stocks/moving-averages/:symbol - Get moving averages
+router.get('/moving-averages/:symbol', stockController.getMovingAverages);
+
+// GET /api/v1/stocks/earnings/:symbol - Get earnings data
+router.get('/earnings/:symbol', stockController.getEarningsData);
 
 module.exports = router; 

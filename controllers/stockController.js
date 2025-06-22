@@ -12,7 +12,6 @@ const getQuote = async (req, res, next) => {
     
     const quote = await stockService.getQuote(symbol);
     
-    // Handle empty or undefined quote
     if (!quote || Object.keys(quote).length === 0) {
       return next(createError(404, `No data found for symbol: ${symbol}`));
     }
@@ -87,8 +86,6 @@ const searchStocks = async (req, res, next) => {
     }
     
     const searchResults = await stockService.searchStocks(keywords);
-    
-    // Handle empty or undefined results
     const results = searchResults || [];
     
     res.json({
@@ -171,6 +168,78 @@ const getMultipleQuotes = async (req, res, next) => {
   }
 };
 
+// Get moving averages
+const getMovingAverages = async (req, res, next) => {
+  try {
+    const { symbol } = req.params;
+    const { periods } = req.query;
+    
+    if (!symbol) {
+      return next(createError(400, 'Stock symbol is required'));
+    }
+    
+    let periodArray = [20, 50, 200];
+    if (periods) {
+      periodArray = periods.split(',').map(p => parseInt(p.trim())).filter(p => !isNaN(p));
+      if (periodArray.length === 0) {
+        periodArray = [20, 50, 200];
+      }
+    }
+    
+    const movingAverages = await stockService.getMovingAverages(symbol, periodArray);
+    
+    res.json({
+      success: true,
+      data: movingAverages,
+      symbol: symbol.toUpperCase(),
+      periods: periodArray,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(createError(500, error.message));
+  }
+};
+
+// Get earnings data
+const getEarningsData = async (req, res, next) => {
+  try {
+    const { symbol } = req.params;
+    
+    if (!symbol) {
+      return next(createError(400, 'Stock symbol is required'));
+    }
+    
+    const earningsData = await stockService.getEarningsData(symbol);
+    
+    res.json({
+      success: true,
+      data: earningsData,
+      symbol: symbol.toUpperCase(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(createError(500, error.message));
+  }
+};
+
+// Test Yahoo Finance API
+const testYahooFinanceAPI = async (req, res, next) => {
+  try {
+    const { symbol = 'AAPL' } = req.params;
+    
+    await stockService.testYahooFinanceAPI(symbol);
+    
+    res.json({
+      success: true,
+      message: 'Yahoo Finance API test completed. Check server logs for details.',
+      symbol: symbol.toUpperCase(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    next(createError(500, error.message));
+  }
+};
+
 module.exports = {
   getQuote,
   getHistoricalData,
@@ -178,5 +247,8 @@ module.exports = {
   searchStocks,
   getCompanyOverview,
   getRateLimitStatus,
-  getMultipleQuotes
+  getMultipleQuotes,
+  getMovingAverages,
+  getEarningsData,
+  testYahooFinanceAPI
 }; 
