@@ -4,16 +4,6 @@ require('dotenv').config();
 // Global test configuration
 global.testTimeout = 10000;
 
-// Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-};
-
 // Setup environment variables for testing
 process.env.NODE_ENV = 'test';
 process.env.PORT = '3001'; // Use different port for testing
@@ -36,4 +26,19 @@ global.createMockResponse = () => {
   return res;
 };
 
-global.createMockNext = () => jest.fn(); 
+global.createMockNext = () => jest.fn();
+
+// Mock console methods to keep test output clean
+global.console = {
+  log: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+};
+
+// Mock Yahoo Finance module
+jest.mock('yahoo-finance2', () => ({
+// ... existing code ...
+
+})); 

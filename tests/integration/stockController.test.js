@@ -198,11 +198,11 @@ describe('Stock Controller Integration Tests', () => {
 
   describe('Error handling', () => {
     it('should handle 404 for non-existent routes', async () => {
-      const response = await request(app)
-        .get('/api/v1/stocks/nonexistent');
+      const response = await request(app).get('/api/v1/stocks/nonexistent');
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
+      expect(response.body.error.message).toContain('Not Found');
     });
 
     it('should handle server errors gracefully', async () => {

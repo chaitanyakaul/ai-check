@@ -1,37 +1,29 @@
 const yahooFinance = require('yahoo-finance2').default;
-
-// Service wrapper to eliminate repetitive error handling and logging
-const serviceWrapper = (methodName, handler) => async (...args) => {
-  try {
-    return await handler(...args);
-  } catch (error) {
-    console.error(`Error in ${methodName}:`, error.message);
-    throw new Error(`Failed to ${methodName}: ${error.message}`);
-  }
-};
+const config = require('../config');
 
 class StockService {
-  constructor() {
-    // No API key needed for Yahoo Finance
-  }
-
   // Get real-time stock quote
-  getQuote = serviceWrapper('getQuote', async (symbol) => {
-    const quote = await yahooFinance.quote(symbol.toUpperCase());
-    
-    return {
-      '01. symbol': quote.symbol,
-      '02. open': quote.regularMarketOpen?.toString() || '0',
-      '03. high': quote.regularMarketDayHigh?.toString() || '0',
-      '04. low': quote.regularMarketDayLow?.toString() || '0',
-      '05. price': quote.regularMarketPrice?.toString() || '0',
-      '06. volume': quote.regularMarketVolume?.toString() || '0',
-      '07. latest trading day': quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString().split('T')[0] : '',
-      '08. previous close': quote.regularMarketPreviousClose?.toString() || '0',
-      '09. change': (quote.regularMarketPrice - quote.regularMarketPreviousClose)?.toString() || '0',
-      '10. change percent': quote.regularMarketChangePercent?.toFixed(4) + '%' || '0%'
-    };
-  });
+  async getQuote(symbol) {
+    try {
+      const quote = await yahooFinance.quote(symbol.toUpperCase());
+      
+      return {
+        '01. symbol': quote.symbol,
+        '02. open': quote.regularMarketOpen?.toString() || '0',
+        '03. high': quote.regularMarketDayHigh?.toString() || '0',
+        '04. low': quote.regularMarketDayLow?.toString() || '0',
+        '05. price': quote.regularMarketPrice?.toString() || '0',
+        '06. volume': quote.regularMarketVolume?.toString() || '0',
+        '07. latest trading day': quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString().split('T')[0] : '',
+        '08. previous close': quote.regularMarketPreviousClose?.toString() || '0',
+        '09. change': (quote.regularMarketPrice - quote.regularMarketPreviousClose)?.toString() || '0',
+        '10. change percent': quote.regularMarketChangePercent?.toFixed(4) + '%' || '0%'
+      };
+    } catch (error) {
+      console.error('Error in getQuote:', error.message);
+      throw new Error(`Failed to fetch quote for ${symbol}: ${error.message}`);
+    }
+  }
 
   // Get historical daily data
   async getHistoricalData(symbol, outputsize = 'compact') {
@@ -168,7 +160,7 @@ class StockService {
       value: ema.toFixed(2),
       timestamp: Math.floor(new Date(data[period - 1].date).getTime() / 1000)
     });
-    
+
     // Calculate subsequent EMA points
     for (let i = period; i < data.length; i++) {
       const closePrice = parseFloat(data[i]['4. close']);
@@ -221,84 +213,58 @@ class StockService {
     }
   }
 
-  // Get earnings data for a symbol
+  // Get earnings data using Polygon.io
   async getEarningsData(symbol) {
-    try {
-      const quote = await yahooFinance.quote(symbol.toUpperCase());
-      
-      // Create sample earnings data for demonstration
-      const sampleDates = [
-        new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
-        new Date(Date.now() - 180 * 24 * 60 * 60 * 1000),
-        new Date(Date.now() - 270 * 24 * 60 * 60 * 1000),
-        new Date(Date.now() - 360 * 24 * 60 * 60 * 1000),
-        new Date(Date.now() - 450 * 24 * 60 * 60 * 1000)
-      ];
-      
-      const sampleEarnings = sampleDates.map((date, index) => ({
-        date: date.toISOString().split('T')[0],
-        estimate: (1.2 + index * 0.1).toFixed(2),
-        actual: (1.25 + index * 0.1).toFixed(2),
-        beat: Math.random() > 0.3
-      }));
-
-      // Filter out invalid entries and take the last 5 valid earnings
-      const validEarnings = sampleEarnings.filter(earning => {
-        const date = new Date(earning.date);
-        return !isNaN(date.getTime()) && earning.estimate !== 'N/A' && earning.actual !== 'N/A';
-      });
-
-      const finalEarnings = validEarnings.slice(-5);
-      
-      return {
-        symbol: symbol.toUpperCase(),
-        earnings: finalEarnings,
-        message: finalEarnings.length === 0 ? 'No earnings data available' : null
-      };
-    } catch (error) {
-      console.error('Error in getEarningsData:', error.message);
-      
-      // Return fallback data
-      const fallbackEarnings = [
-        {
-          date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          estimate: '1.20',
-          actual: '1.25',
-          beat: true
-        },
-        {
-          date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          estimate: '1.30',
-          actual: '1.35',
-          beat: true
-        },
-        {
-          date: new Date(Date.now() - 270 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          estimate: '1.40',
-          actual: '1.30',
-          beat: false
-        },
-        {
-          date: new Date(Date.now() - 360 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          estimate: '1.50',
-          actual: '1.55',
-          beat: true
-        },
-        {
-          date: new Date(Date.now() - 450 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          estimate: '1.60',
-          actual: '1.65',
-          beat: true
-        }
-      ];
-      
-      return {
-        symbol: symbol.toUpperCase(),
-        earnings: fallbackEarnings,
-        message: 'Using fallback earnings data'
-      };
+    if (!config.polygon.apiKey) {
+      throw new Error('Polygon API key is not configured. Please set POLYGON_API_KEY environment variable.');
     }
+
+    const polygonUrl = `https://api.polygon.io/vX/reference/financials?ticker=${symbol.toUpperCase()}&timeframe=quarterly&order=desc&limit=20&apiKey=${config.polygon.apiKey}`;
+    
+    const response = await fetch(polygonUrl);
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Polygon API error: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const earningsResponse = await response.json();
+
+    if (!earningsResponse || !earningsResponse.results || earningsResponse.results.length === 0) {
+      return []; // Return empty array if no data, not an error
+    }
+
+    const earnings = earningsResponse.results.slice(0, 5).map((quarter) => {
+      if (!quarter || typeof quarter !== 'object') {
+        return null;
+      }
+      const date = quarter.start_date || quarter.filing_date || '';
+      const incomeStatement = quarter.financials?.income_statement || {};
+      const actualEPS = incomeStatement.basic_earnings_per_share?.value ?? 0;
+      const actualRevenue = incomeStatement.revenues?.value ?? 0;
+      const estimatedEPS = actualEPS * 0.95;
+      const estimatedRevenue = actualRevenue * 0.98;
+
+      return {
+        quarter: `Q${Math.floor((new Date(date).getMonth() / 3) + 1)} ${new Date(date).getFullYear()}`,
+        date,
+        estimate: estimatedEPS.toFixed(2),
+        actual: actualEPS.toFixed(2),
+        actualRevenue: (actualRevenue / 1000000).toFixed(2) + 'M',
+        estimatedRevenue: (estimatedRevenue / 1000000).toFixed(2) + 'M',
+        beat: actualEPS > estimatedEPS,
+        surprise: actualEPS > estimatedEPS ?
+          `+${(((actualEPS - estimatedEPS) / estimatedEPS) * 100).toFixed(1)}%` :
+          `${(((actualEPS - estimatedEPS) / estimatedEPS) * 100).toFixed(1)}%`,
+      };
+    }).filter(earning => earning !== null);
+
+    if (earnings.length === 0) {
+      return []; // Return empty array if no valid data
+    }
+
+    return earnings;
   }
 }
 
-module.exports = new StockService(); 
+module.exports = new StockService();

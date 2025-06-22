@@ -33,13 +33,8 @@ module.exports = {
     level: process.env.LOG_LEVEL || 'info',
   },
   
-  // Stock data configuration
-  alphaVantage: {
-    apiKey: process.env.ALPHA_VANTAGE_API_KEY || 'demo',
-    baseUrl: 'https://www.alphavantage.co/query',
-    rateLimit: {
-      callsPerMinute: 5,
-      callsPerDay: 500
-    }
-  }
+  // Polygon.io configuration for earnings data
+  polygon: {
+    apiKey: process.env.POLYGON_API_KEY,
+  },
 }; 

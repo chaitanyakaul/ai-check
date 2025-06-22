@@ -82,7 +82,7 @@ describe('StockService', () => {
     });
     it('should handle API errors gracefully', async () => {
       yahooFinance.quote.mockRejectedValue(new Error('Symbol not found'));
-      await expect(stockService.getQuote('INVALID')).rejects.toThrow('Failed to getQuote: Symbol not found');
+      await expect(stockService.getQuote('INVALID')).rejects.toThrow('Failed to fetch quote for INVALID: Symbol not found');
     });
   });
 

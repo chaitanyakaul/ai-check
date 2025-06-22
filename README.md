@@ -34,6 +34,33 @@ A modern, real-time stock market dashboard built with Node.js backend and React 
 - Node.js (v16 or higher)
 - npm or yarn
 
+### Environment Setup
+
+1. **Create environment file**
+   ```bash
+   # Create a .env file in the root directory
+   cp .env.example .env
+   ```
+
+2. **Configure environment variables**
+   ```bash
+   # Required for earnings data (optional for basic functionality)
+   POLYGON_API_KEY=your_polygon_api_key_here
+   
+   # Optional configurations
+   PORT=3000
+   NODE_ENV=development
+   CORS_ORIGIN=*
+   ```
+
+3. **Get Polygon API Key (Optional)**
+   - Visit [Polygon.io](https://polygon.io/)
+   - Sign up for a free account
+   - Get your API key from the dashboard
+   - Add it to your `.env` file
+   
+   **Note**: The Polygon API key is only required for earnings data. The basic stock functionality works without it.
+
 ### Setup
 
 1. **Clone the repository**
@@ -82,6 +109,9 @@ A modern, real-time stock market dashboard built with Node.js backend and React 
 - `GET /api/v1/stocks/quote/:symbol` - Get real-time quote
 - `GET /api/v1/stocks/historical/:symbol` - Get historical data
 - `GET /api/v1/stocks/overview/:symbol` - Get company overview
+- `GET /api/v1/stocks/earnings/:symbol` - Get earnings data (requires Polygon API key)
+- `GET /api/v1/stocks/moving-averages/:symbol` - Get moving averages (SMA/EMA)
+- `GET /api/v1/stocks/search` - Search for stocks by keywords
 
 ### Health Check
 - `GET /health` - Server health status

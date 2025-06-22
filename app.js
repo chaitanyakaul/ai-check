@@ -7,21 +7,24 @@ const path = require('path');
 // Import routes
 const apiRoutes = require('./routes');
 
-// Import middleware
-const errorHandler = require('./middleware/errorHandler');
-const notFound = require('./middleware/notFound');
-
 const app = express();
 
 // Middleware
 app.use(helmet()); // Security headers
 app.use(cors()); // Enable CORS
-app.use(morgan('combined')); // Logging
+app.use(morgan('dev'));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Routes
 app.use('/api', apiRoutes);
+
+// Handle 404 for non-existent routes
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  error.statusCode = 404;
+  next(error);
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -42,8 +45,21 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Error handling middleware
-app.use(notFound);
-app.use(errorHandler);
+// Centralized error handling
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+
+  res.status(statusCode).json({
+    success: false,
+    error: {
+      message,
+      statusCode,
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
 
 module.exports = app; 
