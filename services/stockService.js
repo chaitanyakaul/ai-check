@@ -1,32 +1,37 @@
 const yahooFinance = require('yahoo-finance2').default;
 
+// Service wrapper to eliminate repetitive error handling and logging
+const serviceWrapper = (methodName, handler) => async (...args) => {
+  try {
+    return await handler(...args);
+  } catch (error) {
+    console.error(`Error in ${methodName}:`, error.message);
+    throw new Error(`Failed to ${methodName}: ${error.message}`);
+  }
+};
+
 class StockService {
   constructor() {
     // No API key needed for Yahoo Finance
   }
 
   // Get real-time stock quote
-  async getQuote(symbol) {
-    try {
-      const quote = await yahooFinance.quote(symbol.toUpperCase());
-      
-      return {
-        '01. symbol': quote.symbol,
-        '02. open': quote.regularMarketOpen?.toString() || '0',
-        '03. high': quote.regularMarketDayHigh?.toString() || '0',
-        '04. low': quote.regularMarketDayLow?.toString() || '0',
-        '05. price': quote.regularMarketPrice?.toString() || '0',
-        '06. volume': quote.regularMarketVolume?.toString() || '0',
-        '07. latest trading day': quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString().split('T')[0] : '',
-        '08. previous close': quote.regularMarketPreviousClose?.toString() || '0',
-        '09. change': (quote.regularMarketPrice - quote.regularMarketPreviousClose)?.toString() || '0',
-        '10. change percent': quote.regularMarketChangePercent?.toFixed(4) + '%' || '0%'
-      };
-    } catch (error) {
-      console.error('Error in getQuote:', error.message);
-      throw new Error(`Failed to fetch quote for ${symbol}: ${error.message}`);
-    }
-  }
+  getQuote = serviceWrapper('getQuote', async (symbol) => {
+    const quote = await yahooFinance.quote(symbol.toUpperCase());
+    
+    return {
+      '01. symbol': quote.symbol,
+      '02. open': quote.regularMarketOpen?.toString() || '0',
+      '03. high': quote.regularMarketDayHigh?.toString() || '0',
+      '04. low': quote.regularMarketDayLow?.toString() || '0',
+      '05. price': quote.regularMarketPrice?.toString() || '0',
+      '06. volume': quote.regularMarketVolume?.toString() || '0',
+      '07. latest trading day': quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString().split('T')[0] : '',
+      '08. previous close': quote.regularMarketPreviousClose?.toString() || '0',
+      '09. change': (quote.regularMarketPrice - quote.regularMarketPreviousClose)?.toString() || '0',
+      '10. change percent': quote.regularMarketChangePercent?.toFixed(4) + '%' || '0%'
+    };
+  });
 
   // Get historical daily data
   async getHistoricalData(symbol, outputsize = 'compact') {
