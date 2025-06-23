@@ -1,6 +1,36 @@
 const yahooFinance = require('yahoo-finance2').default;
 const config = require('../config');
 
+// Singleton pattern for the AI model classifier
+class PipelineSingleton {
+  static task = 'zero-shot-classification';
+  static model = 'Xenova/distilbert-base-uncased-mnli';
+  static instance = null;
+
+  static async getInstance() {
+    if (this.instance === null) {
+      const { pipeline } = await import('@xenova/transformers');
+      this.instance = pipeline(this.task, this.model);
+    }
+    return this.instance;
+  }
+}
+
+// Singleton for the Sentiment Analysis model
+class SentimentPipelineSingleton {
+  static task = 'sentiment-analysis';
+  static model = 'Xenova/twitter-roberta-base-sentiment-latest';
+  static instance = null;
+
+  static async getInstance() {
+    if (this.instance === null) {
+      const { pipeline } = await import('@xenova/transformers');
+      this.instance = pipeline(this.task, this.model);
+    }
+    return this.instance;
+  }
+}
+
 class StockService {
   // Get real-time stock quote
   async getQuote(symbol) {
@@ -264,6 +294,135 @@ class StockService {
 
     return earnings;
   }
+
+  // Get risk radar data
+  async getRiskRadarData(symbol) {
+    if (!config.newsApi.apiKey) {
+      const error = 'NewsAPI key is not configured. Please set NEWS_API_KEY environment variable.';
+      console.error(error);
+      return { error };
+    }
+
+    // 1. Fetch company name to create a more specific news query.
+    let companyName;
+    try {
+      const overview = await this.getCompanyOverview(symbol);
+      companyName = overview.Name;
+    } catch (error) {
+      console.error(`Could not fetch company name for ${symbol} to refine news search. Falling back to symbol only.`, error.message);
+      companyName = symbol; // Fallback to just the symbol if overview fails
+    }
+
+    // 2. Construct a more relevant search query and fetch news from NewsAPI.
+    const searchQuery = `("${companyName}" OR ${symbol})`;
+    const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const newsUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(searchQuery)}&from=${fromDate}&sortBy=relevancy&language=en&apiKey=${config.newsApi.apiKey}`;
+    
+    let articles;
+    try {
+      const response = await fetch(newsUrl);
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(`NewsAPI request failed: ${response.status} - ${errorBody.message}`);
+      }
+      const newsData = await response.json();
+      
+      // Post-process to filter for English articles, as NewsAPI's filter is not perfect.
+      const { franc } = await import('franc');
+      articles = newsData.articles.filter(article => {
+        if (!article.title) return false;
+        const lang = franc(article.title);
+        return lang === 'eng' || lang === 'und'; // Keep English or undetermined articles
+      }).slice(0, 20);
+
+    } catch (error) {
+      console.error(`Error fetching or processing news for ${symbol}:`, error.message);
+      throw new Error(`Failed to fetch news for risk analysis.`);
+    }
+
+    if (!articles || articles.length === 0) {
+      return {};
+    }
+
+    // 3. Load the AI models via the singletons.
+    const categoryClassifier = await PipelineSingleton.getInstance();
+    const sentimentClassifier = await SentimentPipelineSingleton.getInstance();
+    
+    // 4. Define categories and classify each article.
+    const riskLabels = [
+      'Mergers & Acquisitions',
+      'Earnings Guidance',
+      'New Product Launch',
+      'Analyst Rating Change',
+      'Legal & Regulatory Issues',
+      'Executive Leadership Changes',
+      'Market Trends & Competition'
+    ];
+    
+    // Run both category and sentiment analysis in parallel for each article.
+    const analysisPromises = articles.map(article => {
+      const textToClassify = `${article.title}. ${article.description || ''}`;
+      return Promise.all([
+        categoryClassifier(textToClassify, riskLabels),
+        sentimentClassifier(article.title)
+      ]);
+    });
+
+    const settledResults = await Promise.allSettled(analysisPromises);
+
+    // 5. Aggregate results, now including sentiment.
+    const summary = settledResults.reduce((acc, result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        const [categoryResult, sentimentResult] = result.value;
+        const topLabel = categoryResult.labels[0];
+        const sentiment = sentimentResult[0].label.toUpperCase();
+        const article = articles[index];
+
+        if (!acc[topLabel]) {
+          acc[topLabel] = {
+            total: 0,
+            positive: 0,
+            negative: 0,
+            neutral: 0,
+            articles: []
+          };
+        }
+
+        acc[topLabel].total += 1;
+        if (sentiment === 'POSITIVE') acc[topLabel].positive += 1;
+        else if (sentiment === 'NEGATIVE') acc[topLabel].negative += 1;
+        else acc[topLabel].neutral += 1;
+        
+        acc[topLabel].articles.push({
+          title: article.title,
+          url: article.url,
+          source: article.source.name,
+          publishedAt: article.publishedAt,
+          sentiment: sentiment 
+        });
+      } else if (result.status === 'rejected') {
+        console.error(`Article analysis failed for "${articles[index]?.title || 'Unknown'}":`, result.reason?.message || result.reason);
+      }
+      return acc;
+    }, {});
+    
+    return summary;
+  }
 }
 
-module.exports = new StockService();
+// Function to pre-warm the AI models on server startup
+const initializeAI = async () => {
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('Initializing AI models... This may take a moment.');
+  }
+  // Initialize both models in parallel
+  await Promise.all([
+    PipelineSingleton.getInstance(),
+    SentimentPipelineSingleton.getInstance()
+  ]);
+  if (process.env.NODE_ENV !== 'test') {
+    console.log('AI models initialized successfully.');
+  }
+};
+
+module.exports = { StockService: new StockService(), initializeAI };

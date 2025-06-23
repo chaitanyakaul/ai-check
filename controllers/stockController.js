@@ -1,4 +1,4 @@
-const stockService = require('../services/stockService');
+const { StockService } = require('../services/stockService');
 const asyncWrapper = require('../utils/asyncWrapper');
 
 // Get real-time stock quote
@@ -7,7 +7,7 @@ const getQuote = asyncWrapper(async (req, res, next) => {
   if (!symbol) {
     return next(createError(400, 'Stock symbol is required'));
   }
-  const quote = await stockService.getQuote(symbol);
+  const quote = await StockService.getQuote(symbol);
   if (!quote || Object.keys(quote).length === 0) {
     return next(createError(404, `No data found for symbol: ${symbol}`));
   }
@@ -25,7 +25,7 @@ const getHistoricalData = asyncWrapper(async (req, res, next) => {
   if (!symbol) {
     return next(createError(400, 'Stock symbol is required'));
   }
-  const historicalData = await stockService.getHistoricalData(symbol, outputsize);
+  const historicalData = await StockService.getHistoricalData(symbol, outputsize);
   res.json({
     success: true,
     data: historicalData,
@@ -42,7 +42,7 @@ const getTechnicalIndicator = asyncWrapper(async (req, res, next) => {
   if (!symbol) {
     return next(createError(400, 'Stock symbol is required'));
   }
-  const technicalData = await stockService.getTechnicalIndicator(symbol, indicator, interval, timePeriod);
+  const technicalData = await StockService.getTechnicalIndicator(symbol, indicator, interval, timePeriod);
   res.json({
     success: true,
     data: technicalData,
@@ -60,7 +60,7 @@ const searchStocks = asyncWrapper(async (req, res, next) => {
   if (!keywords) {
     return next(createError(400, 'Search keywords are required'));
   }
-  const searchResults = await stockService.searchStocks(keywords);
+  const searchResults = await StockService.searchStocks(keywords);
   const results = searchResults || [];
   res.json({
     success: true,
@@ -77,7 +77,7 @@ const getCompanyOverview = asyncWrapper(async (req, res, next) => {
   if (!symbol) {
     return next(createError(400, 'Stock symbol is required'));
   }
-  const overview = await stockService.getCompanyOverview(symbol);
+  const overview = await StockService.getCompanyOverview(symbol);
   res.json({
     success: true,
     data: overview,
@@ -88,7 +88,7 @@ const getCompanyOverview = asyncWrapper(async (req, res, next) => {
 
 // Get API rate limit status
 const getRateLimitStatus = asyncWrapper(async (req, res, next) => {
-  const status = stockService.getRateLimitStatus();
+  const status = StockService.getRateLimitStatus();
   res.json({
     success: true,
     data: status,
@@ -106,7 +106,7 @@ const getMultipleQuotes = asyncWrapper(async (req, res, next) => {
   const quotes = await Promise.all(
     symbolArray.map(async (symbol) => {
       try {
-        const quote = await stockService.getQuote(symbol);
+        const quote = await StockService.getQuote(symbol);
         return { [symbol]: quote };
       } catch (error) {
         return { [symbol]: { error: error.message } };
@@ -135,7 +135,7 @@ const getMovingAverages = asyncWrapper(async (req, res, next) => {
       periodArray = [20, 50, 200];
     }
   }
-  const movingAverages = await stockService.getMovingAverages(symbol, periodArray);
+  const movingAverages = await StockService.getMovingAverages(symbol, periodArray);
   res.json({
     success: true,
     data: movingAverages,
@@ -151,10 +151,25 @@ const getEarningsData = asyncWrapper(async (req, res, next) => {
   if (!symbol) {
     return next(createError(400, 'Stock symbol is required'));
   }
-  const earningsData = await stockService.getEarningsData(symbol);
+  const earningsData = await StockService.getEarningsData(symbol);
   res.json({
     success: true,
     data: earningsData,
+    symbol: symbol.toUpperCase(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get Risk Radar data
+const getRiskRadarData = asyncWrapper(async (req, res, next) => {
+  const { symbol } = req.params;
+  if (!symbol) {
+    return next(createError(400, 'Stock symbol is required'));
+  }
+  const riskData = await StockService.getRiskRadarData(symbol);
+  res.json({
+    success: true,
+    data: riskData,
     symbol: symbol.toUpperCase(),
     timestamp: new Date().toISOString()
   });
@@ -170,5 +185,6 @@ module.exports = {
   getRateLimitStatus,
   getMultipleQuotes,
   getMovingAverages,
-  getEarningsData
+  getEarningsData,
+  getRiskRadarData
 }; 

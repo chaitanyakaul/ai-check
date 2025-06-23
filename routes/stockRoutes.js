@@ -23,4 +23,7 @@ router.get('/moving-averages/:symbol', stockController.getMovingAverages);
 // GET /api/v1/stocks/earnings/:symbol - Get earnings data
 router.get('/earnings/:symbol', stockController.getEarningsData);
 
+// Route for Risk Radar data
+router.get('/risk-radar/:symbol', stockController.getRiskRadarData);
+
 module.exports = router; 

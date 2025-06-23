@@ -41,5 +41,10 @@ module.exports = {
   clearMocks: true,
   
   // Restore mocks between tests
-  restoreMocks: true
+  restoreMocks: true,
+  
+  // Modules that Jest should transform
+  transformIgnorePatterns: [
+    '/node_modules/(?!@xenova/transformers).+\\.js$'
+  ]
 }; 

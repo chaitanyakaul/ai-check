@@ -24,7 +24,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getQuote').mockResolvedValue(mockQuoteData);
+      jest.spyOn(stockService.StockService, 'getQuote').mockResolvedValue(mockQuoteData);
 
       const response = await request(app)
         .get('/api/v1/stocks/quote/AAPL');
@@ -38,7 +38,7 @@ describe('Stock Controller Integration Tests', () => {
 
     it('should handle invalid symbol gracefully', async () => {
       // Mock the service method to throw an error
-      jest.spyOn(stockService, 'getQuote').mockRejectedValue(new Error('Symbol not found'));
+      jest.spyOn(stockService.StockService, 'getQuote').mockRejectedValue(new Error('Symbol not found'));
 
       const response = await request(app)
         .get('/api/v1/stocks/quote/INVALID');
@@ -59,7 +59,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getCompanyOverview').mockResolvedValue(mockOverviewData);
+      jest.spyOn(stockService.StockService, 'getCompanyOverview').mockResolvedValue(mockOverviewData);
 
       const response = await request(app)
         .get('/api/v1/stocks/overview/AAPL');
@@ -83,7 +83,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getHistoricalData').mockResolvedValue(mockHistoricalData);
+      jest.spyOn(stockService.StockService, 'getHistoricalData').mockResolvedValue(mockHistoricalData);
 
       const response = await request(app)
         .get('/api/v1/stocks/historical/AAPL')
@@ -106,7 +106,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getHistoricalData').mockResolvedValue(mockHistoricalData);
+      jest.spyOn(stockService.StockService, 'getHistoricalData').mockResolvedValue(mockHistoricalData);
 
       const response = await request(app)
         .get('/api/v1/stocks/historical/AAPL')
@@ -132,7 +132,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getMovingAverages').mockResolvedValue(mockMovingAverages);
+      jest.spyOn(stockService.StockService, 'getMovingAverages').mockResolvedValue(mockMovingAverages);
 
       const response = await request(app)
         .get('/api/v1/stocks/moving-averages/AAPL')
@@ -160,7 +160,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getMovingAverages').mockResolvedValue(mockMovingAverages);
+      jest.spyOn(stockService.StockService, 'getMovingAverages').mockResolvedValue(mockMovingAverages);
 
       const response = await request(app)
         .get('/api/v1/stocks/moving-averages/AAPL');
@@ -185,7 +185,7 @@ describe('Stock Controller Integration Tests', () => {
       };
 
       // Mock the service method
-      jest.spyOn(stockService, 'getEarningsData').mockResolvedValue(mockEarningsData);
+      jest.spyOn(stockService.StockService, 'getEarningsData').mockResolvedValue(mockEarningsData);
 
       const response = await request(app)
         .get('/api/v1/stocks/earnings/AAPL');
@@ -193,6 +193,40 @@ describe('Stock Controller Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.earnings).toBeDefined();
+    });
+  });
+
+  describe('GET /api/v1/stocks/risk-radar/:symbol', () => {
+    it('should return risk radar data successfully', async () => {
+      const mockRiskData = {
+        'New Product Launch': {
+          count: 1,
+          articles: [{ title: 'New iPhone announced', url: 'some-url' }]
+        }
+      };
+
+      // Mock the service method
+      jest.spyOn(stockService.StockService, 'getRiskRadarData').mockResolvedValue(mockRiskData);
+
+      const response = await request(app)
+        .get('/api/v1/stocks/risk-radar/AAPL');
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toEqual(mockRiskData);
+    });
+
+    it('should handle errors from the service layer', async () => {
+      // Mock the service method to throw an error
+      jest.spyOn(stockService.StockService, 'getRiskRadarData').mockRejectedValue(new Error('AI model failed'));
+
+      const response = await request(app)
+        .get('/api/v1/stocks/risk-radar/AAPL');
+
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
+      expect(response.body.error.message).toContain('AI model failed');
     });
   });
 
@@ -207,7 +241,7 @@ describe('Stock Controller Integration Tests', () => {
 
     it('should handle server errors gracefully', async () => {
       // Mock the service method to throw an error
-      jest.spyOn(stockService, 'getQuote').mockRejectedValue(new Error('Internal server error'));
+      jest.spyOn(stockService.StockService, 'getQuote').mockRejectedValue(new Error('Internal server error'));
 
       const response = await request(app)
         .get('/api/v1/stocks/quote/AAPL');

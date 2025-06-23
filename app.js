@@ -11,7 +11,9 @@ const app = express();
 
 // Middleware
 app.use(helmet()); // Security headers
-app.use(cors()); // Enable CORS
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001']
+})); // Enable CORS for multiple frontend origins
 app.use(morgan('dev'));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
@@ -47,7 +49,16 @@ if (process.env.NODE_ENV === 'production') {
 
 // Centralized error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  // Log error details for debugging
+  if (process.env.NODE_ENV !== 'test') {
+    console.error('Error occurred:', {
+      message: err.message,
+      stack: err.stack,
+      url: req.originalUrl,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+  }
 
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';

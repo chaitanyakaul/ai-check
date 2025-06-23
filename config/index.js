@@ -2,7 +2,7 @@ require('dotenv').config();
 
 module.exports = {
   // Server configuration
-  port: process.env.PORT || 3000,
+  port: process.env.PORT || 5001,
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // Database configuration (for future use)
@@ -35,6 +35,11 @@ module.exports = {
   
   // Polygon.io configuration for earnings data
   polygon: {
-    apiKey: process.env.POLYGON_API_KEY,
+    apiKey: process.env.POLYGON_API_KEY || 'demo',
+  },
+  
+  // NewsAPI configuration
+  newsApi: {
+    apiKey: process.env.NEWS_API_KEY,
   },
 }; 

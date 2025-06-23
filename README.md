@@ -45,7 +45,8 @@ A modern, real-time stock market dashboard built with Node.js backend and React 
 2. **Configure environment variables**
    ```bash
    # Required for earnings data (optional for basic functionality)
-   POLYGON_API_KEY=your_polygon_api_key_here
+   POLYGON_API_KEY=your_polygon_api_key
+   NEWS_API_KEY=your_news_api_key
    
    # Optional configurations
    PORT=3000
@@ -203,6 +204,54 @@ For support and questions:
 - Create an issue on GitHub
 - Check the documentation
 - Review the API endpoints
+
+## 🧠 AI-Powered Risk Radar & Sentiment Analysis
+
+The Stock Market Dashboard features an innovative AI-powered "Risk Radar" that analyzes recent news for each stock and categorizes it by risk topic and sentiment, giving you a fast, actionable overview of potential risks and opportunities.
+
+### How It Works
+- **News Fetching:** For each stock, the backend fetches recent, relevant news articles using NewsAPI, searching by both the company name and ticker symbol. Only English-language articles are included (using language detection).
+- **Risk Topic Classification:** Each article is analyzed using a zero-shot classification model ([Xenova/distilbert-base-uncased-mnli](https://huggingface.co/Xenova/distilbert-base-uncased-mnli)) to determine which risk-related topic it best fits:
+  - Mergers & Acquisitions
+  - Earnings Guidance
+  - New Product Launch
+  - Analyst Rating Change
+  - Legal & Regulatory Issues
+  - Executive Leadership Changes
+  - Market Trends & Competition
+- **Sentiment Analysis:** Each article's headline is also analyzed for sentiment (Positive, Neutral, Negative) using a transformer-based model ([Xenova/twitter-roberta-base-sentiment-latest](https://huggingface.co/Xenova/twitter-roberta-base-sentiment-latest)).
+- **Aggregation:** The backend returns a summary of news volume and sentiment for each risk category, along with the underlying articles.
+
+### Frontend Visualization
+- The Risk Radar displays a stacked bar chart for each risk category, with green (positive), gray (neutral), and red (negative) segments showing the sentiment breakdown.
+- Clicking any bar opens a modal with the exact news headlines for that category.
+- Inside the modal, you can filter articles by sentiment using tabs (All, Positive, Neutral, Negative).
+
+#### Screenshots
+
+> **Note:** Update the image paths after adding your screenshots to the repository (e.g., `screenshots/` or `frontend/public/screenshots/`).
+
+**Risk Radar Bar Chart**
+
+![Risk Radar Bar Chart](screenshots/risk-radar-bar-chart.png)
+
+*The Risk Radar shows news volume and sentiment for each risk topic.*
+
+**Article Modal with Sentiment Tabs**
+
+![Article Modal with Sentiment Tabs](screenshots/article-modal-sentiment-tabs.png)
+
+*Clicking a bar opens a modal with news headlines, filterable by sentiment.*
+
+### API Endpoint
+- `GET /api/v1/stocks/:symbol/risk-radar` — Returns the risk topic and sentiment breakdown for a given stock symbol.
+
+### Models & Performance
+- All AI models run locally on the backend using [@xenova/transformers](https://www.npmjs.com/package/@xenova/transformers) (no external API calls for inference).
+- Models are loaded once at server startup for fast, efficient analysis.
+
+### Environment Variables
+- Requires a valid `NEWS_API_KEY` in your `.env` file for news fetching.
 
 ---
 
