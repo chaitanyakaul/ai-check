@@ -361,10 +361,21 @@ class StockService {
     
     // Run both category and sentiment analysis in parallel for each article.
     const analysisPromises = articles.map(article => {
-      const textToClassify = `${article.title}. ${article.description || ''}`;
+      // Prepare text for classification: use content if available, otherwise title + description
+      const contentForClassification = article.content 
+        ? `${article.title}. ${article.content}` 
+        : `${article.title}. ${article.description || ''}`;
+      
+      // For sentiment analysis, analyze both title and content separately, then combine
+      const titleSentiment = sentimentClassifier(article.title);
+      const contentSentiment = article.content 
+        ? sentimentClassifier(article.content.substring(0, 500)) // Limit content length for efficiency
+        : Promise.resolve([{ label: 'neutral', score: 1.0 }]);
+      
       return Promise.all([
-        categoryClassifier(textToClassify, riskLabels),
-        sentimentClassifier(article.title)
+        categoryClassifier(contentForClassification, riskLabels),
+        titleSentiment,
+        contentSentiment
       ]);
     });
 
@@ -373,9 +384,22 @@ class StockService {
     // 5. Aggregate results, now including sentiment.
     const summary = settledResults.reduce((acc, result, index) => {
       if (result.status === 'fulfilled' && result.value) {
-        const [categoryResult, sentimentResult] = result.value;
+        const [categoryResult, titleSentimentResult, contentSentimentResult] = result.value;
         const topLabel = categoryResult.labels[0];
-        const sentiment = sentimentResult[0].label.toUpperCase();
+        
+        // Combine sentiment from title and content (weight title more heavily)
+        const titleSentiment = titleSentimentResult[0].label.toUpperCase();
+        const contentSentiment = contentSentimentResult[0].label.toUpperCase();
+        
+        // Weight title sentiment 70%, content sentiment 30%
+        const titleScore = titleSentimentResult[0].score;
+        const contentScore = contentSentimentResult[0].score;
+        
+        let finalSentiment = titleSentiment; // Default to title sentiment
+        if (contentScore > titleScore * 1.5) { // If content is significantly more confident
+          finalSentiment = contentSentiment;
+        }
+        
         const article = articles[index];
 
         if (!acc[topLabel]) {
@@ -389,8 +413,8 @@ class StockService {
         }
 
         acc[topLabel].total += 1;
-        if (sentiment === 'POSITIVE') acc[topLabel].positive += 1;
-        else if (sentiment === 'NEGATIVE') acc[topLabel].negative += 1;
+        if (finalSentiment === 'POSITIVE') acc[topLabel].positive += 1;
+        else if (finalSentiment === 'NEGATIVE') acc[topLabel].negative += 1;
         else acc[topLabel].neutral += 1;
         
         acc[topLabel].articles.push({
@@ -398,7 +422,8 @@ class StockService {
           url: article.url,
           source: article.source.name,
           publishedAt: article.publishedAt,
-          sentiment: sentiment 
+          sentiment: finalSentiment,
+          content: article.content || null // Include content if available
         });
       } else if (result.status === 'rejected') {
         console.error(`Article analysis failed for "${articles[index]?.title || 'Unknown'}":`, result.reason?.message || result.reason);

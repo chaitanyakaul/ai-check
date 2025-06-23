@@ -211,7 +211,7 @@ The Stock Market Dashboard features an innovative AI-powered "Risk Radar" that a
 
 ### How It Works
 - **News Fetching:** For each stock, the backend fetches recent, relevant news articles using NewsAPI, searching by both the company name and ticker symbol. Only English-language articles are included (using language detection).
-- **Risk Topic Classification:** Each article is analyzed using a zero-shot classification model ([Xenova/distilbert-base-uncased-mnli](https://huggingface.co/Xenova/distilbert-base-uncased-mnli)) to determine which risk-related topic it best fits:
+- **Risk Topic Classification:** Each article is analyzed using a zero-shot classification model ([Xenova/distilbert-base-uncased-mnli](https://huggingface.co/Xenova/distilbert-base-uncased-mnli)) to determine which risk-related topic it best fits. The system uses full article content when available, falling back to title + description if content is not provided:
   - Mergers & Acquisitions
   - Earnings Guidance
   - New Product Launch
@@ -219,13 +219,14 @@ The Stock Market Dashboard features an innovative AI-powered "Risk Radar" that a
   - Legal & Regulatory Issues
   - Executive Leadership Changes
   - Market Trends & Competition
-- **Sentiment Analysis:** Each article's headline is also analyzed for sentiment (Positive, Neutral, Negative) using a transformer-based model ([Xenova/twitter-roberta-base-sentiment-latest](https://huggingface.co/Xenova/twitter-roberta-base-sentiment-latest)).
-- **Aggregation:** The backend returns a summary of news volume and sentiment for each risk category, along with the underlying articles.
+- **Sentiment Analysis:** Each article's title and content are analyzed separately for sentiment (Positive, Neutral, Negative) using a transformer-based model ([Xenova/twitter-roberta-base-sentiment-latest](https://huggingface.co/Xenova/twitter-roberta-base-sentiment-latest)). The system intelligently combines both analyses, weighting the title more heavily but deferring to content when it shows significantly higher confidence.
+- **Aggregation:** The backend returns a summary of news volume and sentiment for each risk category, along with the underlying articles including their full content when available.
 
 ### Frontend Visualization
 - The Risk Radar displays a stacked bar chart for each risk category, with green (positive), gray (neutral), and red (negative) segments showing the sentiment breakdown.
 - Clicking any bar opens a modal with the exact news headlines for that category.
 - Inside the modal, you can filter articles by sentiment using tabs (All, Positive, Neutral, Negative).
+- When available, article content is displayed below the headline, providing more context for each news item.
 
 #### Screenshots
 
