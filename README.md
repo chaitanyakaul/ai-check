@@ -1,26 +1,40 @@
 # Stock Market Dashboard
 
-A modern, real-time stock market dashboard built with Node.js backend and React frontend, featuring interactive candlestick charts and comprehensive stock data analysis.
+A modern, real-time stock market dashboard built with Node.js backend and React frontend, featuring interactive candlestick charts, comprehensive stock data analysis, and AI-powered news sentiment analysis.
 
 ## 🚀 Features
 
 - **Real-time Stock Data**: Live quotes, historical data, and company information
-- **Interactive Charts**: TradingView Lightweight Charts with candlestick patterns
-- **Multiple Timeframes**: 1 Week, 3 Months, 5 Years, and 20 Years views
+- **Interactive Charts**: TradingView Lightweight Charts with candlestick patterns and multiple timeframes
+- **AI-Powered Risk Radar**: News sentiment analysis and risk categorization
 - **Company Overview**: Sector, industry, market cap, and financial metrics
-- **Responsive Design**: Modern Bootstrap-based UI that works on all devices
-- **Auto-refresh**: Automatic data updates for real-time information
+- **Moving Averages**: SMA and EMA calculations with customizable periods
+- **Earnings Data**: Quarterly earnings information (requires Polygon API key)
 - **Search Functionality**: Easy stock symbol search with instant results
+- **Responsive Design**: Modern Bootstrap-based UI that works on all devices
+
+## 🧠 AI-Powered Risk Radar & Sentiment Analysis
+
+The dashboard features an innovative AI-powered "Risk Radar" that analyzes recent news for each stock and categorizes it by risk topic and sentiment, giving you a fast, actionable overview of potential risks and opportunities.
+
+### How It Works
+- **News Fetching:** Fetches recent, relevant news articles using NewsAPI, searching by both company name and ticker symbol
+- **Risk Topic Classification:** Uses zero-shot classification to categorize articles into risk topics (Mergers & Acquisitions, Earnings Guidance, New Product Launch, etc.)
+- **Sentiment Analysis:** Analyzes both title and content for sentiment (Positive, Neutral, Negative) with intelligent weighting
+- **Visualization:** Displays stacked sentiment bars with interactive modal for detailed article review
+
+### API Endpoint
+- `GET /api/v1/stocks/:symbol/risk-radar` — Returns risk topic and sentiment breakdown
 
 ## 🛠️ Tech Stack
 
 ### Backend
 - **Node.js** - Server runtime
 - **Express.js** - Web framework
-- **Yahoo Finance API** - Stock data source (no rate limits)
-- **CORS** - Cross-origin resource sharing
-- **Helmet** - Security middleware
-- **Morgan** - HTTP request logger
+- **Yahoo Finance API** - Stock data source
+- **NewsAPI** - News data for AI analysis
+- **@xenova/transformers** - AI models for classification and sentiment analysis
+- **CORS, Helmet, Morgan** - Security and logging middleware
 
 ### Frontend
 - **React 19** - UI framework
@@ -34,150 +48,78 @@ A modern, real-time stock market dashboard built with Node.js backend and React 
 - Node.js (v16 or higher)
 - npm or yarn
 
-### Environment Setup
-
-1. **Create environment file**
-   ```bash
-   # Create a .env file in the root directory
-   cp .env.example .env
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   # Required for earnings data (optional for basic functionality)
-   POLYGON_API_KEY=your_polygon_api_key
-   NEWS_API_KEY=your_news_api_key
-   
-   # Optional configurations
-   PORT=3000
-   NODE_ENV=development
-   CORS_ORIGIN=*
-   ```
-
-3. **Get Polygon API Key (Optional)**
-   - Visit [Polygon.io](https://polygon.io/)
-   - Sign up for a free account
-   - Get your API key from the dashboard
-   - Add it to your `.env` file
-   
-   **Note**: The Polygon API key is only required for earnings data. The basic stock functionality works without it.
-
 ### Setup
 
-1. **Clone the repository**
+1. **Clone and install**
    ```bash
    git clone <your-github-repo-url>
    cd ai-backend-service
+   npm run install:all
    ```
 
-2. **Install dependencies**
+2. **Configure environment**
    ```bash
-   # Install backend dependencies
-   npm install
+   cp .env.example .env
+   ```
    
-   # Install frontend dependencies
-   cd frontend
-   npm install
-   cd ..
+   Add your API keys:
+   ```bash
+   NEWS_API_KEY=your_news_api_key          # Required for AI features
+   POLYGON_API_KEY=your_polygon_api_key    # Optional for earnings data
+   PORT=3000                               # Optional
    ```
 
-3. **Start the development servers**
+3. **Start development servers**
    ```bash
-   # Start both backend and frontend
    npm run dev:all
-   
-   # Or start individually
-   npm run dev:backend    # Backend only (port 3000)
-   npm run dev:frontend   # Frontend only (port 3001)
    ```
 
 4. **Access the application**
    - Frontend: http://localhost:3001
    - Backend API: http://localhost:3000
-   - Health Check: http://localhost:3000/health
-
-## 🎯 Usage
-
-1. **Search for a stock** using the search bar in the header
-2. **View real-time data** including price, change, volume, and market cap
-3. **Switch timeframes** using the chart controls (1W, 3M, 5Y, 20Y)
-4. **Analyze charts** with interactive candlestick patterns
-5. **Monitor company metrics** in the overview section
 
 ## 📊 API Endpoints
 
 ### Stock Data
-- `GET /api/v1/stocks/quote/:symbol` - Get real-time quote
-- `GET /api/v1/stocks/historical/:symbol` - Get historical data
-- `GET /api/v1/stocks/overview/:symbol` - Get company overview
-- `GET /api/v1/stocks/earnings/:symbol` - Get earnings data (requires Polygon API key)
-- `GET /api/v1/stocks/moving-averages/:symbol` - Get moving averages (SMA/EMA)
-- `GET /api/v1/stocks/search` - Search for stocks by keywords
+- `GET /api/v1/stocks/quote/:symbol` - Real-time quote
+- `GET /api/v1/stocks/historical/:symbol` - Historical data
+- `GET /api/v1/stocks/overview/:symbol` - Company overview
+- `GET /api/v1/stocks/moving-averages/:symbol` - Moving averages (SMA/EMA)
+- `GET /api/v1/stocks/earnings/:symbol` - Earnings data
+- `GET /api/v1/stocks/risk-radar/:symbol` - AI news analysis
+- `GET /api/v1/stocks/search` - Stock search
 
 ### Health Check
-- `GET /health` - Server health status
+- `GET /health` - Server status
 
 ## 🔧 Available Scripts
 
 ```bash
 # Development
 npm run dev:all          # Start both servers
-npm run dev:backend      # Start backend only
-npm run dev:frontend     # Start frontend only
+npm run dev:backend      # Backend only
+npm run dev:frontend     # Frontend only
 
 # Production
 npm start               # Start production server
-npm run build           # Build frontend for production
+npm run build           # Build frontend
 
-# Installation
-npm run install:all     # Install all dependencies
+# Testing
+npm test               # Run all tests
+npm run test:unit      # Unit tests only
+npm run test:integration # Integration tests only
 ```
-
-## 🌟 Key Features
-
-### Real-time Data
-- Live stock prices and market data
-- Automatic data refresh
-- Post-market and pre-market data
-
-### Chart Analysis
-- Professional candlestick charts
-- Multiple timeframe options
-- Interactive zoom and pan
-- Price and volume indicators
-
-### Company Information
-- Market capitalization
-- Sector and industry classification
-- Financial ratios (P/E, P/B, etc.)
-- Analyst ratings
-
-## 📱 Responsive Design
-
-The dashboard is fully responsive and works seamlessly on:
-- Desktop computers
-- Tablets
-- Mobile phones
-- All modern browsers
-
-## 🔒 Security
-
-- CORS enabled for cross-origin requests
-- Helmet.js for security headers
-- Input validation and sanitization
-- Error handling and logging
 
 ## 🚀 Deployment
 
-### Backend Deployment
+### Backend
 1. Set environment variables
-2. Run `npm start` for production
+2. Run `npm start`
 3. Use PM2 or similar process manager
 
-### Frontend Deployment
+### Frontend
 1. Run `npm run build`
 2. Deploy the `build` folder to your hosting service
-3. Configure proxy settings for API calls
 
 ## 🤝 Contributing
 
@@ -194,65 +136,11 @@ This project is licensed under the ISC License.
 ## 🙏 Acknowledgments
 
 - [Yahoo Finance API](https://finance.yahoo.com/) for stock data
+- [NewsAPI](https://newsapi.org/) for news data
 - [TradingView](https://www.tradingview.com/) for charting library
 - [Bootstrap](https://getbootstrap.com/) for UI components
 - [React](https://reactjs.org/) for the frontend framework
-
-## 📞 Support
-
-For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the API endpoints
-
-## 🧠 AI-Powered Risk Radar & Sentiment Analysis
-
-The Stock Market Dashboard features an innovative AI-powered "Risk Radar" that analyzes recent news for each stock and categorizes it by risk topic and sentiment, giving you a fast, actionable overview of potential risks and opportunities.
-
-### How It Works
-- **News Fetching:** For each stock, the backend fetches recent, relevant news articles using NewsAPI, searching by both the company name and ticker symbol. Only English-language articles are included (using language detection).
-- **Risk Topic Classification:** Each article is analyzed using a zero-shot classification model ([Xenova/distilbert-base-uncased-mnli](https://huggingface.co/Xenova/distilbert-base-uncased-mnli)) to determine which risk-related topic it best fits. The system uses full article content when available, falling back to title + description if content is not provided:
-  - Mergers & Acquisitions
-  - Earnings Guidance
-  - New Product Launch
-  - Analyst Rating Change
-  - Legal & Regulatory Issues
-  - Executive Leadership Changes
-  - Market Trends & Competition
-- **Sentiment Analysis:** Each article's title and content are analyzed separately for sentiment (Positive, Neutral, Negative) using a transformer-based model ([Xenova/twitter-roberta-base-sentiment-latest](https://huggingface.co/Xenova/twitter-roberta-base-sentiment-latest)). The system intelligently combines both analyses, weighting the title more heavily but deferring to content when it shows significantly higher confidence.
-- **Aggregation:** The backend returns a summary of news volume and sentiment for each risk category, along with the underlying articles including their full content when available.
-
-### Frontend Visualization
-- The Risk Radar displays a stacked bar chart for each risk category, with green (positive), gray (neutral), and red (negative) segments showing the sentiment breakdown.
-- Clicking any bar opens a modal with the exact news headlines for that category.
-- Inside the modal, you can filter articles by sentiment using tabs (All, Positive, Neutral, Negative).
-- When available, article content is displayed below the headline, providing more context for each news item.
-
-#### Screenshots
-
-> **Note:** Update the image paths after adding your screenshots to the repository (e.g., `screenshots/` or `frontend/public/screenshots/`).
-
-**Risk Radar Bar Chart**
-
-![Risk Radar Bar Chart](screenshots/risk-radar-bar-chart.png)
-
-*The Risk Radar shows news volume and sentiment for each risk topic.*
-
-**Article Modal with Sentiment Tabs**
-
-![Article Modal with Sentiment Tabs](screenshots/article-modal-sentiment-tabs.png)
-
-*Clicking a bar opens a modal with news headlines, filterable by sentiment.*
-
-### API Endpoint
-- `GET /api/v1/stocks/:symbol/risk-radar` — Returns the risk topic and sentiment breakdown for a given stock symbol.
-
-### Models & Performance
-- All AI models run locally on the backend using [@xenova/transformers](https://www.npmjs.com/package/@xenova/transformers) (no external API calls for inference).
-- Models are loaded once at server startup for fast, efficient analysis.
-
-### Environment Variables
-- Requires a valid `NEWS_API_KEY` in your `.env` file for news fetching.
+- [Hugging Face](https://huggingface.co/) for AI models
 
 ---
 

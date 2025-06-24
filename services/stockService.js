@@ -423,7 +423,7 @@ class StockService {
           source: article.source.name,
           publishedAt: article.publishedAt,
           sentiment: finalSentiment,
-          content: article.content || null // Include content if available
+          description: article.description || null // Include description for frontend display
         });
       } else if (result.status === 'rejected') {
         console.error(`Article analysis failed for "${articles[index]?.title || 'Unknown'}":`, result.reason?.message || result.reason);
