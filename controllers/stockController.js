@@ -35,25 +35,6 @@ const getHistoricalData = asyncWrapper(async (req, res, next) => {
   });
 });
 
-// Get technical indicators
-const getTechnicalIndicator = asyncWrapper(async (req, res, next) => {
-  const { symbol } = req.params;
-  const { indicator = 'SMA', interval = 'daily', timePeriod = 20 } = req.query;
-  if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
-  }
-  const technicalData = await StockService.getTechnicalIndicator(symbol, indicator, interval, timePeriod);
-  res.json({
-    success: true,
-    data: technicalData,
-    symbol: symbol.toUpperCase(),
-    indicator,
-    interval,
-    timePeriod,
-    timestamp: new Date().toISOString()
-  });
-});
-
 // Search for stocks
 const searchStocks = asyncWrapper(async (req, res, next) => {
   const { keywords } = req.query;
@@ -82,41 +63,6 @@ const getCompanyOverview = asyncWrapper(async (req, res, next) => {
     success: true,
     data: overview,
     symbol: symbol.toUpperCase(),
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Get API rate limit status
-const getRateLimitStatus = asyncWrapper(async (req, res, next) => {
-  const status = StockService.getRateLimitStatus();
-  res.json({
-    success: true,
-    data: status,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Get multiple stock quotes
-const getMultipleQuotes = asyncWrapper(async (req, res, next) => {
-  const { symbols } = req.query;
-  if (!symbols) {
-    return next(createError(400, 'Stock symbols are required (comma-separated)'));
-  }
-  const symbolArray = symbols.split(',').map(s => s.trim());
-  const quotes = await Promise.all(
-    symbolArray.map(async (symbol) => {
-      try {
-        const quote = await StockService.getQuote(symbol);
-        return { [symbol]: quote };
-      } catch (error) {
-        return { [symbol]: { error: error.message } };
-      }
-    })
-  );
-  res.json({
-    success: true,
-    data: Object.assign({}, ...quotes),
-    symbols: symbolArray,
     timestamp: new Date().toISOString()
   });
 });
@@ -179,11 +125,8 @@ const getRiskRadarData = asyncWrapper(async (req, res, next) => {
 module.exports = {
   getQuote,
   getHistoricalData,
-  getTechnicalIndicator,
   searchStocks,
   getCompanyOverview,
-  getRateLimitStatus,
-  getMultipleQuotes,
   getMovingAverages,
   getEarningsData,
   getRiskRadarData

@@ -14,9 +14,6 @@ router.get('/search', stockController.searchStocks);
 // GET /api/v1/stocks/overview/:symbol - Get company overview
 router.get('/overview/:symbol', stockController.getCompanyOverview);
 
-// GET /api/v1/stocks/quotes - Get multiple stock quotes
-router.get('/quotes', stockController.getMultipleQuotes);
-
 // GET /api/v1/stocks/moving-averages/:symbol - Get moving averages
 router.get('/moving-averages/:symbol', stockController.getMovingAverages);
 
