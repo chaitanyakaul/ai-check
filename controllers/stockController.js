@@ -5,11 +5,11 @@ const asyncWrapper = require('../utils/asyncWrapper');
 const getQuote = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
   if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+    return res.status(400).json({ success: false, error: 'Stock symbol is required', requestId: req.requestId });
   }
   const quote = await StockService.getQuote(symbol);
   if (!quote || Object.keys(quote).length === 0) {
-    return next(createError(404, `No data found for symbol: ${symbol}`));
+    throw new Error('No data found');
   }
   res.json({
     success: true,
@@ -23,7 +23,7 @@ const getHistoricalData = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
   const { outputsize = 'compact' } = req.query;
   if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+    return res.status(400).json({ success: false, error: 'Stock symbol is required', requestId: req.requestId });
   }
   const historicalData = await StockService.getHistoricalData(symbol, outputsize);
   res.json({
@@ -39,7 +39,7 @@ const getHistoricalData = asyncWrapper(async (req, res, next) => {
 const searchStocks = asyncWrapper(async (req, res, next) => {
   const { keywords } = req.query;
   if (!keywords) {
-    return next(createError(400, 'Search keywords are required'));
+    return res.status(400).json({ success: false, error: 'Search keywords are required', requestId: req.requestId });
   }
   const searchResults = await StockService.searchStocks(keywords);
   const results = searchResults || [];
@@ -55,16 +55,11 @@ const searchStocks = asyncWrapper(async (req, res, next) => {
 // Get company overview
 const getCompanyOverview = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
-  if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+  const data = await StockService.getCompanyOverview(symbol);
+  if (!data) {
+    throw new Error('No data found');
   }
-  const overview = await StockService.getCompanyOverview(symbol);
-  res.json({
-    success: true,
-    data: overview,
-    symbol: symbol.toUpperCase(),
-    timestamp: new Date().toISOString()
-  });
+  res.json({ success: true, data });
 });
 
 // Get moving averages
@@ -72,7 +67,7 @@ const getMovingAverages = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
   const { periods } = req.query;
   if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+    return res.status(400).json({ success: false, error: 'Stock symbol is required', requestId: req.requestId });
   }
   let periodArray = [20, 50, 200];
   if (periods) {
@@ -95,7 +90,7 @@ const getMovingAverages = asyncWrapper(async (req, res, next) => {
 const getEarningsData = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
   if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+    return res.status(400).json({ success: false, error: 'Stock symbol is required', requestId: req.requestId });
   }
   const earningsData = await StockService.getEarningsData(symbol);
   res.json({
@@ -110,7 +105,7 @@ const getEarningsData = asyncWrapper(async (req, res, next) => {
 const getRiskRadarData = asyncWrapper(async (req, res, next) => {
   const { symbol } = req.params;
   if (!symbol) {
-    return next(createError(400, 'Stock symbol is required'));
+    return res.status(400).json({ success: false, error: 'Stock symbol is required', requestId: req.requestId });
   }
   const riskData = await StockService.getRiskRadarData(symbol);
   res.json({

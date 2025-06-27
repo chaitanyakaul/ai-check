@@ -1,5 +1,6 @@
 const yahooFinance = require('yahoo-finance2').default;
 const config = require('../config');
+const { rateLimiter } = require('./rateLimiter');
 
 // Singleton pattern for the AI model classifier
 class PipelineSingleton {
@@ -37,21 +38,91 @@ class StockService {
     try {
       const quote = await yahooFinance.quote(symbol.toUpperCase());
       
+      // Determine current price (aftermarket if available)
+      let currentPrice = quote.regularMarketPrice;
+      let currentTime = quote.regularMarketTime;
+      let priceSource = 'regular';
+      
+      // Check if we're in aftermarket hours and have aftermarket data
+      const now = new Date();
+      const etTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+      const currentHour = etTime.getHours();
+      const currentMinute = etTime.getMinutes();
+      const timeInMinutes = currentHour * 60 + currentMinute;
+      
+      // After-hours: 4:00 PM - 8:00 PM ET
+      if (timeInMinutes >= 960 && timeInMinutes <= 1200 && quote.postMarketPrice) {
+        currentPrice = quote.postMarketPrice;
+        currentTime = quote.postMarketTime;
+        priceSource = 'aftermarket';
+      }
+      // Pre-market: 4:00 AM - 9:30 AM ET
+      else if (timeInMinutes >= 240 && timeInMinutes < 570 && quote.preMarketPrice) {
+        currentPrice = quote.preMarketPrice;
+        currentTime = quote.preMarketTime;
+        priceSource = 'premarket';
+      }
+      
       return {
         '01. symbol': quote.symbol,
         '02. open': quote.regularMarketOpen?.toString() || '0',
         '03. high': quote.regularMarketDayHigh?.toString() || '0',
         '04. low': quote.regularMarketDayLow?.toString() || '0',
-        '05. price': quote.regularMarketPrice?.toString() || '0',
+        '05. price': currentPrice?.toString() || '0',
         '06. volume': quote.regularMarketVolume?.toString() || '0',
-        '07. latest trading day': quote.regularMarketTime ? new Date(quote.regularMarketTime * 1000).toISOString().split('T')[0] : '',
+        '07. latest trading day': currentTime ? new Date(currentTime * 1000).toISOString().split('T')[0] : '',
         '08. previous close': quote.regularMarketPreviousClose?.toString() || '0',
-        '09. change': (quote.regularMarketPrice - quote.regularMarketPreviousClose)?.toString() || '0',
-        '10. change percent': quote.regularMarketChangePercent?.toFixed(4) + '%' || '0%'
+        '09. change': (currentPrice - quote.regularMarketPreviousClose)?.toString() || '0',
+        '10. change percent': ((currentPrice - quote.regularMarketPreviousClose) / quote.regularMarketPreviousClose * 100)?.toFixed(4) + '%' || '0%',
+        '11. price source': priceSource,
+        '12. aftermarket price': quote.postMarketPrice?.toString() || null,
+        '13. premarket price': quote.preMarketPrice?.toString() || null,
+        '14. market status': this.getMarketStatus(),
+        '15. last updated': new Date().toISOString(),
+        '16. rate limit info': {
+          remaining: rateLimiter.getRemaining('global'),
+          resetTime: rateLimiter.getResetTime('global')
+        }
       };
     } catch (error) {
       throw new Error(`Failed to fetch quote for ${symbol}: ${error.message}`);
     }
+  }
+
+  // Helper method to determine market status
+  getMarketStatus() {
+    const now = new Date();
+    const etTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    const day = etTime.getDay();
+    const hour = etTime.getHours();
+    const minute = etTime.getMinutes();
+    const timeInMinutes = hour * 60 + minute;
+
+    // Weekend
+    if (day === 0 || day === 6) return 'closed';
+
+    // Pre-market: 4:00 AM - 9:30 AM ET
+    if (timeInMinutes >= 240 && timeInMinutes < 570) return 'premarket';
+
+    // Regular hours: 9:30 AM - 4:00 PM ET
+    if (timeInMinutes >= 570 && timeInMinutes <= 960) return 'open';
+
+    // After-hours: 4:00 PM - 8:00 PM ET
+    if (timeInMinutes > 960 && timeInMinutes <= 1200) return 'afterhours';
+
+    return 'closed';
+  }
+
+  // Get refresh interval based on market status
+  getRefreshInterval() {
+    const status = this.getMarketStatus();
+    const intervals = {
+      premarket: 60000,    // 1 minute
+      open: 30000,         // 30 seconds
+      afterhours: 120000,  // 2 minutes
+      closed: 0            // No auto-refresh
+    };
+    return intervals[status] || 0;
   }
 
   // Get historical daily data
@@ -135,22 +206,6 @@ class StockService {
         
         throw new Error(`Failed to fetch company overview for ${symbol}: ${error.message}`);
       }
-    }
-  }
-
-  // Search for stocks
-  async searchStocks(keywords) {
-    try {
-      const searchResults = await yahooFinance.search(keywords);
-      
-      return searchResults.quotes.map(quote => ({
-        '1. symbol': quote.symbol,
-        '2. name': quote.shortname || quote.longname || quote.symbol,
-        '3. type': quote.quoteType || 'N/A',
-        '4. region': quote.region || 'N/A'
-      }));
-    } catch (error) {
-      throw new Error(`Failed to search stocks: ${error.message}`);
     }
   }
 
@@ -318,29 +373,17 @@ class StockService {
     const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const newsUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(searchQuery)}&from=${fromDate}&sortBy=relevancy&language=en&apiKey=${config.newsApi.apiKey}`;
     
-    let articles;
+    let articles = [];
     try {
       const response = await fetch(newsUrl);
-      if (!response.ok) {
-        const errorBody = await response.json();
-        throw new Error(`NewsAPI request failed: ${response.status} - ${errorBody.message}`);
-      }
-      const newsData = await response.json();
-      
-      // Post-process to filter for English articles, as NewsAPI's filter is not perfect.
-      const { franc } = await import('franc');
-      articles = newsData.articles.filter(article => {
-        if (!article.title) return false;
-        const lang = franc(article.title);
-        return lang === 'eng' || lang === 'und'; // Keep English or undetermined articles
-      }).slice(0, 20);
-
+      if (!response.ok) throw new Error('Failed to fetch news for risk analysis.');
+      const data = await response.json();
+      articles = data.articles || [];
     } catch (error) {
       console.error(`Error fetching or processing news for ${symbol}:`, error.message);
       throw new Error(`Failed to fetch news for risk analysis.`);
     }
-
-    if (!articles || articles.length === 0) {
+    if (!articles.length) {
       return {};
     }
 
@@ -432,6 +475,22 @@ class StockService {
     }, {});
     
     return summary;
+  }
+
+  // Search for stocks
+  async searchStocks(keywords) {
+    try {
+      const searchResults = await yahooFinance.search(keywords);
+      
+      return searchResults.quotes.map(quote => ({
+        '1. symbol': quote.symbol,
+        '2. name': quote.shortname || quote.longname || quote.symbol,
+        '3. type': quote.quoteType || 'N/A',
+        '4. region': quote.region || 'N/A'
+      }));
+    } catch (error) {
+      throw new Error(`Failed to search stocks: ${error.message}`);
+    }
   }
 }
 

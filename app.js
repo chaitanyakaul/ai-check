@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const checkUrlLength = require('./utils/checkUrlLength');
 
 // Import routes
 const apiRoutes = require('./routes');
@@ -17,6 +18,9 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+
+// Check for very long URLs before hitting API routes
+app.use('/api', checkUrlLength);
 
 // Routes
 app.use('/api', apiRoutes);
