@@ -118,7 +118,7 @@ class StockService {
     const status = this.getMarketStatus();
     const intervals = {
       premarket: 60000,    // 1 minute
-      open: 30000,         // 30 seconds
+      open: 5000,          // 5 seconds
       afterhours: 120000,  // 2 minutes
       closed: 0            // No auto-refresh
     };
